@@ -90,7 +90,7 @@ def load_data(filename="addressbook.pkl"):
         with open(filename, "rb") as f:
             return pickle.load(f)
     except FileNotFoundError:
-        return AddressBook()
+        return AddressBook()  # Повернення нової адресної книги, якщо файл не знайдено
 
 def input_error(func):
     def wrapper(*args, **kwargs):
@@ -104,6 +104,8 @@ def input_error(func):
 
 @input_error
 def add_contact(args, book: AddressBook):
+    if len(args) < 2:
+        return "Please provide a name and a phone number."
     name, phone, *_ = args
     record = book.find(name)
     message = "Contact updated."
@@ -111,12 +113,13 @@ def add_contact(args, book: AddressBook):
         record = Record(name)
         book.add_record(record)
         message = "Contact added."
-    if phone:
-        record.add_phone(phone)
+    record.add_phone(phone)
     return message
 
 @input_error
 def add_birthday(args, book):
+    if len(args) < 2:
+        return "Please provide a name and a birthday."
     name, birthday, *_ = args
     record = book.find(name)
     if record:
@@ -126,6 +129,8 @@ def add_birthday(args, book):
 
 @input_error
 def show_birthday(args, book):
+    if len(args) < 1:
+        return "Please provide a name."
     name, *_ = args
     record = book.find(name)
     if record and record.birthday:
@@ -144,21 +149,24 @@ def birthdays(args, book):
 
 def parse_input(user_input):
     parts = user_input.split()
-    command = parts[0].lower()
+    command = parts[0].lower() if parts else ""
     args = parts[1:]
     return command, args
 
 def main():
-    book = load_data()
+    book = load_data()  # Завантаження даних з файлу при запуску
 
     print("Welcome to the assistant bot!")
     while True:
         user_input = input("Enter a command: ")
+        if not user_input.strip():
+            print("Please enter a command.")
+            continue
         command, args = parse_input(user_input)
 
         if command in ["close", "exit"]:
             print("Good bye!")
-            save_data(book)
+            save_data(book)  # Збереження даних у файл перед виходом
             break
 
         elif command == "hello":
@@ -168,15 +176,24 @@ def main():
             print(add_contact(args, book))
 
         elif command == "change":
+            if len(args) < 2:
+                print("Please provide a name and a new phone number.")
+                continue
             name, new_phone, *_ = args
             record = book.find(name)
             if record:
-                record.edit_phone(record.phones[0].value, new_phone)
-                print(f"Phone number for {name} updated.")
+                try:
+                    record.edit_phone(record.phones[0].value, new_phone)
+                    print(f"Phone number for {name} updated.")
+                except ValueError as e:
+                    print(str(e))
             else:
                 print("Contact not found.")
 
         elif command == "phone":
+            if len(args) < 1:
+                print("Please provide a name.")
+                continue
             name, *_ = args
             record = book.find(name)
             if record:
